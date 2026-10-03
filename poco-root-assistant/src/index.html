@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Poco Root Assistant</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+            <defs>
+              <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#8b5cf6" />
+                <stop offset="1" stop-color="#6366f1" />
+              </linearGradient>
+            </defs>
+            <rect x="3" y="3" width="42" height="42" rx="12" fill="url(#g)" />
+            <path
+              d="M24 12a9 9 0 0 0-9 9v4a9 9 0 1 0 18 0v-4a9 9 0 0 0-9-9zm0 4v8"
+              fill="none"
+              stroke="#fff"
+              stroke-width="3.2"
+              stroke-linecap="round"
+            />
+          </svg>
+          <div>
+            <h1>Poco Root Assistant</h1>
+            <p class="tag">POCO X6 5G · <span class="mono">garnet</span> · Magisk</p>
+          </div>
+        </div>
+        <div id="statusPill" class="pill pill-idle">
+          <span class="dot"></span><span id="statusText">Démarrage…</span>
+        </div>
+      </header>
+
+      <section id="banner" class="banner">
+        <div class="banner-icon">⚠️</div>
+        <div>
+          <strong>À lire avant de commencer</strong>
+          <p id="honest">…</p>
+        </div>
+      </section>
+
+      <main class="grid">
+        <!-- Left: the honest step plan -->
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Étapes</h2>
+            <span class="legend">
+              <span class="badge badge-auto">Auto</span>
+              <span class="badge badge-semi">Semi-auto</span>
+              <span class="badge badge-manual">À faire toi-même</span>
+            </span>
+          </div>
+          <ol id="steps" class="steps"></ol>
+        </section>
+
+        <!-- Right: live state + actions + log -->
+        <section class="col">
+          <div class="panel">
+            <div class="panel-head"><h2>Téléphone</h2>
+              <button id="btnRefresh" class="btn btn-ghost btn-sm">Rafraîchir</button>
+            </div>
+            <div id="deviceCard" class="device-card">
+              <p class="muted">Branche ton POCO X6 5G en USB, débogage activé.</p>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Actions</h2></div>
+
+            <div id="toolsRow" class="tools-row">
+              <button id="btnTools" class="btn btn-primary">Préparer les outils (adb, fastboot, Magisk)</button>
+              <button id="btnOpenData" class="btn btn-ghost btn-sm" title="Ouvrir le dossier des outils">Dossier</button>
+            </div>
+            <div id="progressWrap" class="progress-wrap hidden">
+              <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+              <span id="progressMsg" class="progress-msg"></span>
+            </div>
+
+            <div class="actions-grid">
+              <button id="btnFastboot" class="btn" disabled>Redémarrer en fastboot</button>
+              <button id="btnCheckUnlock" class="btn" disabled>Vérifier le déverrouillage</button>
+              <button id="btnMagisk" class="btn" disabled>Installer Magisk</button>
+              <button id="btnPushBoot" class="btn" disabled>Choisir &amp; pousser le boot.img</button>
+              <button id="btnPull" class="btn" disabled>Récupérer le boot patché</button>
+              <button id="btnFlash" class="btn btn-warn" disabled>Flasher &amp; redémarrer</button>
+              <button id="btnRebootSys" class="btn" disabled>Sortir du fastboot</button>
+              <button id="btnVerify" class="btn" disabled>Vérifier le root</button>
+            </div>
+
+            <div class="links">
+              <a href="#" data-url="https://new.c.mi.com/global/post/2251454">Guide officiel Mi Unlock</a>
+              <a href="#" data-url="https://xdaforums.com/c/xiaomi-poco-x6.12566/">Forum XDA POCO X6</a>
+              <a href="#" data-url="https://topjohnwu.github.io/Magisk/install.html">Doc Magisk</a>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Journal</h2>
+              <button id="btnClearLog" class="btn btn-ghost btn-sm">Vider</button>
+            </div>
+            <pre id="log" class="log"></pre>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>Open-source · GPL-3.0 · utilise adb/fastboot (Google) et Magisk (topjohnwu)</span>
+      </footer>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
