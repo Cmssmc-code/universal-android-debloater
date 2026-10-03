@@ -18,6 +18,12 @@ permissions:
 jobs:
   test-core:
     runs-on: ubuntu-latest
+    # The repository's root .cargo/config forces `clang` + `-fuse-ld=mold` for
+    # linux-gnu, but mold isn't on the runner. Override to the default system
+    # linker just for this job so the pure-logic tests can link.
+    env:
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: cc
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: "-Clink-arg=-fuse-ld=bfd"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
