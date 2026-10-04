@@ -61,10 +61,22 @@ pub fn spawn(app: AppHandle) {
                         "{}{}",
                         fb_out.stdout, fb_out.stderr
                     ));
-                    let sig = format!("{serials:?}");
+                    // When a device is in fastboot, also surface the live unlock
+                    // status so the UI and the flash guard always know it.
+                    let unlocked = if serials.is_empty() {
+                        pra_core::fastboot::UnlockState::Unknown
+                    } else if let Ok(gv) = adb::run(&fastboot_path, ["getvar", "unlocked"]) {
+                        pra_core::fastboot::unlock_state(&format!("{}{}", gv.stdout, gv.stderr))
+                    } else {
+                        pra_core::fastboot::UnlockState::Unknown
+                    };
+                    let sig = format!("{serials:?}|{unlocked:?}");
                     if sig != last_fastboot {
                         last_fastboot = sig;
-                        let _ = app.emit("fastboot", serde_json::json!({ "serials": serials }));
+                        let _ = app.emit(
+                            "fastboot",
+                            serde_json::json!({ "serials": serials, "unlocked": unlocked }),
+                        );
                     }
                 }
             }

@@ -10,6 +10,7 @@ const state = {
   devices: [],
   info: null,
   fastboot: [],
+  unlocked: "unknown",
   lastPatched: null,
   downloading: false,
 };
@@ -139,9 +140,15 @@ function hasUnauthorized() {
   return state.devices.some((d) => d.state === "unauthorized");
 }
 
+function unlockLabel() {
+  if (state.unlocked === "unlocked") return " · déverrouillé ✅";
+  if (state.unlocked === "locked") return " · verrouillé 🔒";
+  return "";
+}
+
 function updateUi() {
   const inFastboot = state.fastboot.length > 0;
-  if (inFastboot) setPill("pill-fastboot", "Mode fastboot");
+  if (inFastboot) setPill("pill-fastboot", "Mode fastboot" + unlockLabel());
   else if (state.serial)
     setPill("pill-ok", state.info && state.info.model ? state.info.model : "Téléphone détecté");
   else if (hasUnauthorized()) setPill("pill-warn", "Autorise le débogage USB sur le téléphone");
@@ -154,7 +161,7 @@ function updateUi() {
   enable("btnMagisk", dev);
   enable("btnPushBoot", dev);
   enable("btnPull", dev);
-  enable("btnFlash", inFastboot);
+  enable("btnFlash", inFastboot && state.unlocked !== "locked");
   enable("btnRebootSys", inFastboot);
   enable("btnVerify", dev);
   enable("btnTools", !state.downloading);
@@ -203,6 +210,9 @@ function bindButtons() {
 
   $("btnCheckUnlock").onclick = async () => {
     const r = await call("fastboot_state");
+    state.fastboot = r.serials || [];
+    state.unlocked = r.unlocked || "unknown";
+    updateUi();
     if (!r.serials.length) {
       toast("Aucun appareil en fastboot. Passe d'abord en mode fastboot.", "err");
       return;
@@ -303,6 +313,7 @@ async function init() {
   });
   await listen("fastboot", (e) => {
     state.fastboot = (e.payload && e.payload.serials) || [];
+    state.unlocked = (e.payload && e.payload.unlocked) || "unknown";
     updateUi();
   });
   await listen("log", (e) => logLine((e.payload && e.payload.line) || ""));

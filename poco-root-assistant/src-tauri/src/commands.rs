@@ -43,6 +43,16 @@ fn require_fastboot(app: &AppHandle) -> Result<PathBuf, String> {
     }
 }
 
+/// Read up to `n` bytes from the start of a file (for boot-image validation).
+fn read_head(path: &std::path::Path, n: usize) -> Result<Vec<u8>, String> {
+    use std::io::Read;
+    let mut f = std::fs::File::open(path).map_err(|e| e.to_string())?;
+    let mut buf = vec![0u8; n];
+    let read = f.read(&mut buf).map_err(|e| e.to_string())?;
+    buf.truncate(read);
+    Ok(buf)
+}
+
 #[derive(serde::Serialize)]
 pub struct FastbootState {
     serials: Vec<String>,
@@ -158,6 +168,12 @@ pub async fn pick_and_push_boot(app: AppHandle, serial: String) -> Result<String
     let app2 = app.clone();
     spawn(move || {
         let adb = require_adb(&app2)?;
+        // Guard against pushing the wrong file: a stock boot.img must start
+        // with the Android boot magic.
+        let head = read_head(&path, 8)?;
+        if !pra_core::looks_like_boot_image(&head) {
+            return Err("Ce fichier ne ressemble pas à une image boot Android (magic « ANDROID! » absent). Choisis bien le boot.img d'origine extrait de ta ROM.".into());
+        }
         let ps = path.to_string_lossy().to_string();
         let out = adb::run(
             &adb,
@@ -230,6 +246,19 @@ pub async fn flash_patched_boot(
 ) -> Result<String, String> {
     spawn(move || {
         let fb = require_fastboot(&app)?;
+        // Guard 1: the file must look like a real boot image.
+        let head = read_head(std::path::Path::new(&img_path), 8)?;
+        if !pra_core::looks_like_boot_image(&head) {
+            return Err("L'image à flasher n'a pas le magic « ANDROID! » : ce n'est pas une image boot valide. Reprends la récupération du boot patché.".into());
+        }
+        // Guard 2: never flash boot on a locked bootloader (it would fail).
+        let gv = adb::run(&fb, ["getvar", "unlocked"]).map_err(|e| e.to_string())?;
+        if matches!(
+            pra_core::fastboot::unlock_state(&format!("{}{}", gv.stdout, gv.stderr)),
+            pra_core::fastboot::UnlockState::Locked
+        ) {
+            return Err("Bootloader VERROUILLÉ : je refuse de flasher (ça échouerait). Déverrouille le bootloader d'abord.".into());
+        }
         let mut args: Vec<String> = Vec::new();
         if let Some(s) = &serial {
             args.push("-s".into());

@@ -12,11 +12,13 @@
 pub mod device;
 pub mod fastboot;
 pub mod flow;
+pub mod image;
 pub mod magisk;
 
 pub use device::{parse_adb_devices, parse_getprop, AdbDevice, AdbState, DeviceInfo, SupportLevel};
 pub use fastboot::{parse_fastboot_devices, unlock_state, UnlockState};
 pub use flow::{root_plan, Automation, Step};
+pub use image::{looks_like_boot_image, BOOT_MAGIC};
 pub use magisk::find_patched_images;
 
 /// Codename of the POCO X6 5G (shared with the Redmi Note 13 Pro 5G).
