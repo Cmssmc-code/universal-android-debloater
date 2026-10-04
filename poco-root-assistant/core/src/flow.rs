@@ -112,22 +112,23 @@ pub fn root_plan() -> Vec<Step> {
         },
         Step {
             id: "get_boot",
-            title: "Récupérer le boot.img d'origine",
-            detail: "Il faut le boot.img correspondant EXACTEMENT au firmware installé. \
-                     L'app t'indique la version exacte à chercher et t'aide à extraire \
-                     boot.img depuis la ROM fastboot (payload.bin).",
+            title: "Récupérer l'image boot d'origine",
+            detail: "Il faut l'image correspondant EXACTEMENT à ton firmware (l'app \
+                     affiche le numéro de build). Télécharge la ROM fastboot de cette \
+                     version, décompresse-la, puis prends images/init_boot.img s'il \
+                     existe, sinon images/boot.img.",
             automation: Automation::SemiAuto,
-            manual_reason: Some("Télécharger la bonne ROM dépend d'un miroir externe et \
-                du bon numéro de build. Un boot.img qui ne correspond pas = bootloop. \
-                L'app vérifie la correspondance mais ne peut pas deviner le fichier à ta \
-                place."),
+            manual_reason: Some("Le téléchargement de la ROM dépend d'un site externe et \
+                du bon numéro de build : un mauvais fichier = bootloop. L'app vérifie \
+                seulement que le fichier est une image boot Android valide, pas qu'il \
+                correspond à ton firmware : c'est à toi de prendre la bonne version."),
         },
         Step {
             id: "patch_magisk",
-            title: "Patcher le boot.img avec Magisk",
-            detail: "L'app installe Magisk et pousse le boot.img sur le téléphone. Dans \
-                     Magisk : Installer → « Sélectionner et patcher un fichier » → choisir \
-                     le boot.img.",
+            title: "Patcher l'image avec Magisk",
+            detail: "L'app installe Magisk et pousse l'image (boot.img ou init_boot.img) \
+                     sur le téléphone. Dans Magisk : Installer → « Sélectionner et \
+                     patcher un fichier » → choisir ce fichier.",
             automation: Automation::SemiAuto,
             manual_reason: Some("Le patch s'exécute dans l'app Magisk sur le téléphone. \
                 L'app prépare tout, mais c'est toi qui lances le patch (1 tap)."),
@@ -142,17 +143,19 @@ pub fn root_plan() -> Vec<Step> {
         },
         Step {
             id: "flash_boot",
-            title: "Flasher le boot patché",
-            detail: "L'app redémarre en fastboot et lance « fastboot flash boot \
-                     magisk_patched.img » puis « fastboot reboot ».",
+            title: "Flasher l'image patchée",
+            detail: "L'app flashe l'image patchée sur la même partition que le fichier \
+                     d'origine (boot ou init_boot), puis lance « fastboot reboot ». Elle \
+                     refuse si le bootloader est verrouillé.",
             automation: Automation::Auto,
             manual_reason: None,
         },
         Step {
             id: "verify_root",
             title: "Vérifier le root",
-            detail: "Au redémarrage, l'app vérifie que Magisk est actif. Ton POCO X6 5G \
-                     est rooté 🎉",
+            detail: "Au redémarrage, l'app vérifie que Magisk est installé. Ouvre-le : \
+                     s'il affiche « Installé » (et non « N/A »), ton POCO X6 5G est \
+                     rooté 🎉",
             automation: Automation::Auto,
             manual_reason: None,
         },

@@ -85,16 +85,25 @@
               <button id="btnFastboot" class="btn" disabled>Redémarrer en fastboot</button>
               <button id="btnCheckUnlock" class="btn" disabled>Vérifier le déverrouillage</button>
               <button id="btnMagisk" class="btn" disabled>Installer Magisk</button>
-              <button id="btnPushBoot" class="btn" disabled>Choisir &amp; pousser le boot.img</button>
+              <button id="btnPushBoot" class="btn" disabled>Choisir &amp; pousser l'image boot</button>
               <button id="btnPull" class="btn" disabled>Récupérer le boot patché</button>
               <button id="btnFlash" class="btn btn-warn" disabled>Flasher &amp; redémarrer</button>
               <button id="btnRebootSys" class="btn" disabled>Sortir du fastboot</button>
               <button id="btnVerify" class="btn" disabled>Vérifier le root</button>
             </div>
 
+            <div class="target-row">
+              <label for="bootTarget">Partition à flasher</label>
+              <select id="bootTarget">
+                <option value="boot">boot (fichier boot.img)</option>
+                <option value="init_boot">init_boot (fichier init_boot.img)</option>
+              </select>
+              <span class="target-hint">se règle toute seule selon le fichier choisi</span>
+            </div>
+
             <div class="links">
               <a href="#" data-url="https://new.c.mi.com/global/post/2251454">Guide officiel Mi Unlock</a>
-              <a href="#" data-url="https://xdaforums.com/c/xiaomi-poco-x6.12566/">Forum XDA POCO X6</a>
+              <a href="#" data-url="https://xdaforums.com/t/how-i-unlocked-bootloader-on-hyper-os-2-official-method-with-tips-except-chinese.4726413/">Astuces déblocage HyperOS (XDA)</a>
               <a href="#" data-url="https://topjohnwu.github.io/Magisk/install.html">Doc Magisk</a>
             </div>
           </div>

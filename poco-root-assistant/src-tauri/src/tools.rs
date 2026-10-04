@@ -127,15 +127,38 @@ fn latest_magisk_url() -> Result<String, String> {
         .get("assets")
         .and_then(|a| a.as_array())
         .ok_or("réponse GitHub sans « assets »")?;
+    let name_of = |a: &serde_json::Value| a.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string();
+    let names: Vec<String> = assets.iter().map(name_of).collect();
+    // Only the real Magisk app: never a stub/debug build.
+    let wanted = pra_core::magisk::pick_magisk_apk(names.iter().map(|s| s.as_str()))
+        .ok_or("aucun APK Magisk reconnu dans la dernière release")?;
     for asset in assets {
-        let name = asset.get("name").and_then(|n| n.as_str()).unwrap_or("");
-        if name.to_ascii_lowercase().ends_with(".apk") {
+        if name_of(asset) == wanted {
             if let Some(url) = asset.get("browser_download_url").and_then(|u| u.as_str()) {
                 return Ok(url.to_string());
             }
         }
     }
-    Err("aucun APK trouvé dans la dernière release Magisk".into())
+    Err("APK Magisk sans lien de téléchargement".into())
+}
+
+/// A real Magisk APK is a zip of several MB. Reject (and delete) anything else,
+/// such as an HTML error page, so a bad file is never cached and installed.
+fn validate_apk(path: &Path) -> Result<(), String> {
+    let len = fs::metadata(path).map_err(|e| e.to_string())?.len();
+    let mut head = [0u8; 4];
+    let head_ok = fs::File::open(path)
+        .and_then(|mut f| f.read_exact(&mut head))
+        .is_ok()
+        && pra_core::magisk::looks_like_apk(&head);
+    if len < 1_000_000 || !head_ok {
+        let _ = fs::remove_file(path);
+        return Err(
+            "Le fichier Magisk téléchargé est invalide (ce n'est pas un APK complet). Relance « Préparer les outils »."
+                .into(),
+        );
+    }
+    Ok(())
 }
 
 /// Ensure Platform-Tools and the Magisk APK are present, downloading what is
@@ -158,6 +181,7 @@ pub fn ensure_tools(app: &AppHandle) -> Result<(), String> {
         emit_progress(app, "magisk", 0, "Récupération de la dernière version de Magisk…");
         let url = latest_magisk_url().unwrap_or_else(|_| MAGISK_FALLBACK_URL.to_string());
         download(app, &url, &apk, "magisk")?;
+        validate_apk(&apk)?;
     }
 
     emit_progress(app, "done", 100, "Outils prêts ✅");

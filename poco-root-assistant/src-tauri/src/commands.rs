@@ -149,14 +149,22 @@ pub async fn install_magisk(app: AppHandle, serial: String) -> Result<String, St
     .await
 }
 
+/// Result of pushing a stock image to the phone: which partition it belongs to
+/// (so the UI can flash the patched version back to the same one).
+#[derive(serde::Serialize)]
+pub struct PushedImage {
+    message: String,
+    partition: pra_core::BootPartition,
+}
+
 #[tauri::command]
-pub async fn pick_and_push_boot(app: AppHandle, serial: String) -> Result<String, String> {
+pub async fn pick_and_push_boot(app: AppHandle, serial: String) -> Result<PushedImage, String> {
     // The native file picker must run on the main thread.
     let (tx, rx) = std::sync::mpsc::channel();
     app.run_on_main_thread(move || {
         let file = rfd::FileDialog::new()
             .add_filter("Image de démarrage", &["img"])
-            .set_title("Choisir le boot.img d'origine (exactement ta version de firmware)")
+            .set_title("Choisir init_boot.img (s'il existe) sinon boot.img, de ta version exacte")
             .pick_file();
         let _ = tx.send(file);
     })
@@ -168,22 +176,43 @@ pub async fn pick_and_push_boot(app: AppHandle, serial: String) -> Result<String
     let app2 = app.clone();
     spawn(move || {
         let adb = require_adb(&app2)?;
-        // Guard against pushing the wrong file: a stock boot.img must start
-        // with the Android boot magic.
+
+        // Guard 1: the file name decides the target partition. Refuse anything
+        // that is not clearly boot.img or init_boot.img rather than guess.
+        let file_name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default()
+            .to_string();
+        let partition = pra_core::partition_for_image(&file_name).ok_or_else(|| {
+            format!(
+                "Nom de fichier « {file_name} » non reconnu. Le fichier doit s'appeler boot.img ou init_boot.img (tel qu'extrait de la ROM)."
+            )
+        })?;
+
+        // Guard 2: it must really be an Android boot image.
         let head = read_head(&path, 8)?;
         if !pra_core::looks_like_boot_image(&head) {
-            return Err("Ce fichier ne ressemble pas à une image boot Android (magic « ANDROID! » absent). Choisis bien le boot.img d'origine extrait de ta ROM.".into());
+            return Err("Ce fichier ne ressemble pas à une image boot Android (magic « ANDROID! » absent). Reprends le fichier d'origine extrait de ta ROM.".into());
         }
+
+        let remote = format!("/sdcard/Download/{}.img", partition.fastboot_name());
         let ps = path.to_string_lossy().to_string();
         let out = adb::run(
             &adb,
-            ["-s", serial.as_str(), "push", ps.as_str(), "/sdcard/Download/boot.img"],
+            ["-s", serial.as_str(), "push", ps.as_str(), remote.as_str()],
         )
         .map_err(|e| e.to_string())?;
         let combined = format!("{}{}", out.stdout, out.stderr);
-        log(&app2, format!("push boot.img → {}", combined.trim()));
+        log(&app2, format!("push {file_name} → {remote}: {}", combined.trim()));
         if out.ok {
-            Ok("boot.img copié dans /sdcard/Download/ sur le téléphone. Patche-le maintenant dans l'app Magisk.".into())
+            Ok(PushedImage {
+                message: format!(
+                    "{file_name} copié dans /sdcard/Download/ (partition cible : {}). Patche-le maintenant dans l'app Magisk.",
+                    partition.fastboot_name()
+                ),
+                partition,
+            })
         } else {
             Err(combined)
         }
@@ -242,10 +271,16 @@ pub async fn fastboot_state(app: AppHandle) -> Result<FastbootState, String> {
 pub async fn flash_patched_boot(
     app: AppHandle,
     img_path: String,
+    partition: String,
     serial: Option<String>,
 ) -> Result<String, String> {
     spawn(move || {
         let fb = require_fastboot(&app)?;
+        // Guard 0: only ever flash to a whitelisted partition. The UI value is
+        // never passed to fastboot unless it is exactly "boot" or "init_boot".
+        let target = pra_core::BootPartition::parse(&partition).ok_or_else(|| {
+            format!("Partition « {partition} » refusée : seules « boot » et « init_boot » sont autorisées.")
+        })?;
         // Guard 1: the file must look like a real boot image.
         let head = read_head(std::path::Path::new(&img_path), 8)?;
         if !pra_core::looks_like_boot_image(&head) {
@@ -265,11 +300,14 @@ pub async fn flash_patched_boot(
             args.push(s.clone());
         }
         args.push("flash".into());
-        args.push("boot".into());
+        args.push(target.fastboot_name().into());
         args.push(img_path.clone());
         let out = adb::run(&fb, &args).map_err(|e| e.to_string())?;
         let flash = format!("{}{}", out.stdout, out.stderr);
-        log(&app, format!("fastboot flash boot → {}", flash.trim()));
+        log(
+            &app,
+            format!("fastboot flash {} → {}", target.fastboot_name(), flash.trim()),
+        );
         if !out.ok {
             return Err(flash);
         }

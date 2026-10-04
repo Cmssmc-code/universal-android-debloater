@@ -112,9 +112,9 @@ function renderDevice() {
     ${chip}
     ${
       info.build_incremental
-        ? `<p class="muted" style="margin-top:10px">Pour le boot.img, cherche <span class="mono">${esc(
+        ? `<p class="muted" style="margin-top:10px">Cherche la ROM fastboot en version <span class="mono">${esc(
             info.build_incremental
-          )}</span> (doit correspondre EXACTEMENT).</p>`
+          )}</span> (doit correspondre EXACTEMENT), puis prends-y init_boot.img s'il existe, sinon boot.img.</p>`
         : ""
     }`;
 }
@@ -174,6 +174,11 @@ function enable(id, on) {
   $(id).disabled = !on;
 }
 
+// Show the target partition on the Flash button so it is visible at click time.
+function updateFlashLabel() {
+  $("btnFlash").textContent = "Flasher sur « " + $("bootTarget").value + " » & redémarrer";
+}
+
 // ---- actions -------------------------------------------------------------
 
 function bindButtons() {
@@ -230,8 +235,15 @@ function bindButtons() {
 
   $("btnPushBoot").onclick = async () => {
     const r = await call("pick_and_push_boot", { serial: state.serial });
-    toast(r, "ok");
+    // The backend decided the target partition from the file name; mirror it
+    // in the selector so the flash step uses the same one.
+    $("bootTarget").value = r.partition;
+    updateFlashLabel();
+    toast(r.message, "ok");
+    logLine(r.message);
   };
+
+  $("bootTarget").onchange = updateFlashLabel;
 
   $("btnPull").onclick = async () => {
     const path = await call("pull_patched_boot", { serial: state.serial });
@@ -246,7 +258,11 @@ function bindButtons() {
       toast("Récupère d'abord le boot patché (bouton précédent).", "err");
       return;
     }
-    const r = await call("flash_patched_boot", { imgPath: state.lastPatched, serial: null });
+    const r = await call("flash_patched_boot", {
+      imgPath: state.lastPatched,
+      partition: $("bootTarget").value,
+      serial: null,
+    });
     toast("Flash terminé, redémarrage. 🎉", "ok");
     logLine(r);
   };
@@ -319,6 +335,7 @@ async function init() {
   await listen("log", (e) => logLine((e.payload && e.payload.line) || ""));
 
   bindButtons();
+  updateFlashLabel();
   renderDevice();
   updateUi();
   logLine("Prêt. Branche ton POCO X6 5G en USB (débogage activé).");

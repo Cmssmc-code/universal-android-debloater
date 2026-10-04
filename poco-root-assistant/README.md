@@ -9,7 +9,7 @@ tout ce qui peut l'être (détection, flash, récupération du boot patché…) 
 **t'indique clairement, étape par étape, ce qui ne peut pas être fait en totale
 autonomie** — et pourquoi.
 
-![Aperçu](docs/preview.png)
+![Aperçu de l'interface (téléphone simulé : valeurs d'exemple, pas une vraie capture d'un appareil)](docs/preview.png)
 
 ---
 
@@ -42,10 +42,10 @@ ne peut pas le faire à ta place.
 | Demander le déverrouillage + **attendre le délai** | 🔴 **Toi** | Délai & quota imposés par Xiaomi |
 | Déverrouiller le bootloader (**efface tout**) | 🔴 **Toi** | Outil officiel Xiaomi + effacement = ta décision |
 | Vérifier le déverrouillage (`fastboot`) | 🟢 **L'app** | — |
-| Récupérer le bon `boot.img` d'origine | 🟡 **Semi** | L'app t'indique la version exacte ; tu fournis la ROM |
-| Patcher `boot.img` dans Magisk | 🟡 **Semi** | Le patch tourne dans l'app Magisk (1 tap) |
-| Récupérer le `boot` patché | 🟢 **L'app** | — |
-| Flasher le `boot` patché + redémarrer | 🟢 **L'app** | — |
+| Récupérer l'image d'origine (`init_boot.img` s'il existe, sinon `boot.img`) | 🟡 **Semi** | L'app t'indique le build exact ; tu télécharges la ROM et tu sors le fichier |
+| Patcher l'image dans Magisk | 🟡 **Semi** | Le patch tourne dans l'app Magisk (1 tap) |
+| Récupérer l'image patchée | 🟢 **L'app** | — |
+| Flasher l'image patchée (même partition que l'original) + redémarrer | 🟢 **L'app** | Refuse si le bootloader est verrouillé |
 | Vérifier le root | 🟢 **L'app** | — |
 
 ---
@@ -54,9 +54,11 @@ ne peut pas le faire à ta place.
 
 - **Rooter efface tout le téléphone** (le déverrouillage du bootloader wipe les données). **Sauvegarde avant.**
 - Tu **perds la garantie** et certaines fonctions (paiement sans contact, apps bancaires, Netflix HD, jeux anti-triche) peuvent **cesser de fonctionner** à cause de l'intégrité Play.
-- **Un mauvais `boot.img` (qui ne correspond pas exactement au firmware) = bootloop.** L'app te donne la version exacte à utiliser, mais c'est à toi de fournir la bonne ROM.
+- **Une mauvaise image (qui ne correspond pas exactement à ton firmware) = bootloop.** L'app te montre le build exact à utiliser, mais elle **ne peut pas vérifier** que ton fichier correspond : elle contrôle seulement que c'est une image boot Android valide et qu'elle repart sur la bonne partition (`boot` ou `init_boot`, d'après le nom du fichier). Prendre la bonne ROM, c'est à toi.
+- **Si ça bootloop** : redémarre en fastboot (Volume − + Power) et reflashe l'image d'origine non patchée (`fastboot flash boot boot.img`, ou `init_boot` si c'est ton cas).
 - Tu fais ça **à tes propres risques**. Les auteurs ne sont pas responsables d'un téléphone endommagé.
 - N'utilise cette app **que sur un téléphone qui t'appartient**.
+- **Première version, pas encore éprouvée.** La logique est couverte par des tests unitaires et l'app compile sous Windows (CI), mais elle n'a pas encore tourné sur un vrai POCO X6 5G. Si une étape bloque, le **Journal** de l'app dit ce qui s'est passé (ouvre une issue avec son contenu).
 
 ---
 
@@ -90,8 +92,8 @@ cargo tauri build
 3. **Branche** le POCO X6 5G en USB et accepte l'autorisation de débogage. L'app affiche le modèle, le nom de code (`garnet`) et **la version exacte du firmware**.
 4. Suis les étapes **rouges** (compte Xiaomi, demande de déverrouillage, attente, Mi Unlock Tool). L'app te donne les liens et explications.
 5. Une fois le bootloader **déverrouillé** : clique **« Vérifier le déverrouillage »**.
-6. **Récupère le `boot.img`** correspondant exactement à la version affichée, puis **« Choisir & pousser le boot.img »**.
-7. **« Installer Magisk »**, ouvre Magisk sur le téléphone → *Installer → Sélectionner et patcher un fichier* → choisis le `boot.img`.
+6. **Télécharge la ROM fastboot** correspondant exactement au build affiché, décompresse-la, et prends dans `images/` le fichier **`init_boot.img` s'il existe, sinon `boot.img`**. Puis **« Choisir & pousser l'image boot »** : l'app règle toute seule la partition cible d'après le nom du fichier (elle refuse un autre nom).
+7. **« Installer Magisk »**, ouvre Magisk sur le téléphone → *Installer → Sélectionner et patcher un fichier* → choisis le fichier poussé (`boot.img` ou `init_boot.img`).
 8. **« Récupérer le boot patché »**, puis **« Redémarrer en fastboot »** et **« Flasher & redémarrer »**.
 9. **« Vérifier le root »** 🎉
 
@@ -150,7 +152,7 @@ versions toujours à jour, aucune question de licence de redistribution.
 - **adb / fastboot** — [Android SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools) (Google).
 - **Magisk** — [topjohnwu/Magisk](https://github.com/topjohnwu/Magisk) (GPL-3.0).
 - **Tauri** — [tauri-apps/tauri](https://github.com/tauri-apps/tauri).
-- Infos appareil : nom de code `garnet` confirmé via [LineageOS wiki](https://wiki.lineageos.org/devices/garnet/).
+- Infos appareil : nom de code `garnet` confirmé via [LineageOS wiki](https://wiki.lineageos.org/devices/garnet/variant5/).
 
 Cette application est distribuée sous licence **GPL-3.0**, comme le projet UAD qui l'héberge.
 
