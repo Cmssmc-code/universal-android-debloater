@@ -28,6 +28,7 @@ impl Default for Settings {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Message {
     LoadDeviceSettings,
@@ -182,7 +183,7 @@ impl Settings {
         }
     }
 
-    pub fn view(&self, phone: &Phone) -> Element<Message, Renderer<Theme>> {
+    pub fn view(&self, phone: &Phone) -> Element<'_, Message, Renderer<Theme>> {
         let radio_btn_theme = Theme::ALL
             .iter()
             .fold(row![].spacing(10), |column, option| {

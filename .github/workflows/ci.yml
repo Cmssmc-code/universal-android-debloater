@@ -6,12 +6,14 @@ on:
       - "Cargo.lock"
       - "Cargo.toml"
       - "**.json"
+      - ".github/workflows/ci.yml"
   pull_request:
     paths:
       - "**.rs"
       - "Cargo.lock"
       - "Cargo.toml"
       - "**.json"
+      - ".github/workflows/ci.yml"
 
 jobs:
   lint:
@@ -40,6 +42,9 @@ jobs:
             args: " --all -- --check"
     steps:
       - uses: actions/checkout@v3
+      - name: Install Linux system libraries (fontconfig for iced)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
       - uses: rui314/setup-mold@v1 # faster linker
       - uses: actions/cache@v3
         with:

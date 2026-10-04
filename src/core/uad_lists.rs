@@ -197,7 +197,7 @@ pub fn load_debloat_lists(remote: bool) -> (Result<PackageHashMap, PackageHashMa
                 }
             }
         })
-        .map_or_else(|_| get_local_lists(), |list| list)
+        .unwrap_or_else(|_| get_local_lists())
     } else {
         warn!("Could not load remote debloat list");
         get_local_lists()

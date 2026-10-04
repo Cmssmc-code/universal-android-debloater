@@ -26,7 +26,7 @@ impl About {
         }
         // other events are handled by UadGui update()
     }
-    pub fn view(&self, update_state: &UpdateState) -> Element<Message, Renderer<Theme>> {
+    pub fn view(&self, update_state: &UpdateState) -> Element<'_, Message, Renderer<Theme>> {
         let about_text = text(
             "Universal Android Debloater (UAD) is a Free and Open-Source community project aiming at simplifying \
             the removal of pre-installed apps on any Android device.",

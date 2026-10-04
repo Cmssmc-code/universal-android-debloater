@@ -26,6 +26,7 @@ pub struct PackageInfo {
     pub removal: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum LoadingState {
     DownloadingList(String),
@@ -285,7 +286,7 @@ impl List {
         &self,
         settings: &Settings,
         selected_device: &Phone,
-    ) -> Element<Message, Renderer<Theme>> {
+    ) -> Element<'_, Message, Renderer<Theme>> {
         match &self.loading_state {
             LoadingState::DownloadingList(_) => {
                 let text = "Downloading latest UAD lists from Github. Please wait...";
@@ -470,7 +471,7 @@ impl List {
         device: &Phone,
         settings: &Settings,
         packages: &[PackageRow],
-    ) -> Element<Message, Renderer<Theme>> {
+    ) -> Element<'_, Message, Renderer<Theme>> {
         // (nb_to_restore, nb_to_remove)
         let mut h_recap: HashMap<Removal, (u8, u8)> = HashMap::new();
         for p in packages.iter().filter(|p| p.selected) {
