@@ -345,6 +345,7 @@ impl text_input::StyleSheet for Theme {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Default, Debug, Clone, Copy)]
 pub enum PickList {
     #[default]
