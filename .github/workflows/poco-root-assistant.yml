@@ -1,0 +1,62 @@
+name: Poco Root Assistant (Windows build)
+
+# Builds the Windows installer (.exe, NSIS) for the Poco Root Assistant app.
+# The compiled installer is uploaded as a workflow artifact you can download
+# from the run's "Summary" page.
+
+on:
+  push:
+    branches: ["ccr-cc923ce8-c7j5yx", "main"]
+    paths:
+      - "poco-root-assistant/**"
+      - ".github/workflows/poco-root-assistant.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-core:
+    runs-on: ubuntu-latest
+    # The repository's root .cargo/config forces `clang` + `-fuse-ld=mold` for
+    # linux-gnu, but mold isn't on the runner. Override to the default system
+    # linker just for this job so the pure-logic tests can link.
+    env:
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: cc
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: "-Clink-arg=-fuse-ld=bfd"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Unit-test core logic
+        working-directory: poco-root-assistant/core
+        run: cargo test
+
+  build-windows:
+    runs-on: windows-latest
+    needs: test-core
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable, MSVC)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "poco-root-assistant/src-tauri -> target"
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0" --locked
+
+      - name: Build Windows installer
+        working-directory: poco-root-assistant/src-tauri
+        run: cargo tauri build
+
+      - name: Upload installer + portable exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: PocoRootAssistant-Windows
+          if-no-files-found: error
+          path: |
+            poco-root-assistant/src-tauri/target/release/bundle/nsis/*-setup.exe
+            poco-root-assistant/src-tauri/target/release/poco-root-assistant.exe
